@@ -1,0 +1,174 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum UserRole {
+  ADOPTER
+  SHELTER_STAFF
+}
+
+enum HousingType {
+  APARTMENT
+  HOUSE
+}
+
+enum EnergyLevel {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum PetStatus {
+  AVAILABLE
+  PENDING
+  ADOPTED
+}
+
+enum ApplicationStatus {
+  SUBMITTED
+  UNDER_REVIEW
+  INTERVIEW
+  APPROVED
+  REJECTED
+  WITHDRAWN
+  COMPLETED
+}
+
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique @db.VarChar(255)
+  passwordHash String
+  role         UserRole
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  adopterProfile AdopterProfile?
+  shelterStaff   ShelterStaff?
+
+  applications Application[]
+  matchResults MatchResult[]
+}
+
+model Shelter {
+  id          String   @id @default(uuid())
+  name        String   @db.VarChar(255)
+  description String?
+  location    String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  staff ShelterStaff[]
+  pets  Pet[]
+}
+
+model ShelterStaff {
+  id String @id @default(uuid())
+
+  userId    String
+  shelterId String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  shelter Shelter @relation(fields: [shelterId], references: [id], onDelete: Cascade)
+
+  @@unique([userId])
+  @@index([shelterId])
+}
+
+model AdopterProfile {
+  id String @id @default(uuid())
+
+  userId String @unique
+
+  housingType   HousingType
+  hasYard       Boolean
+  hasChildren   Boolean
+  hasPets       Boolean
+  activityLevel EnergyLevel
+  location      String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Pet {
+  id String @id @default(uuid())
+
+  name String @db.VarChar(255)
+
+  species String @db.VarChar(100)
+  age     Int
+
+  housingRequirement HousingType
+
+  childFriendly Boolean
+  dogFriendly   Boolean
+  catFriendly   Boolean
+
+  energyLevel EnergyLevel
+
+  shelterId String
+  status    PetStatus @default(AVAILABLE)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  shelter      Shelter       @relation(fields: [shelterId], references: [id], onDelete: Cascade)
+  applications Application[]
+  matchResults MatchResult[]
+
+  @@index([shelterId])
+  @@index([status, housingRequirement, energyLevel])
+}
+
+model Application {
+  id String @id @default(uuid())
+
+  petId     String
+  adopterId String
+
+  status ApplicationStatus @default(SUBMITTED)
+
+  submittedAt DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  pet     Pet  @relation(fields: [petId], references: [id], onDelete: Cascade)
+  adopter User @relation(fields: [adopterId], references: [id], onDelete: Cascade)
+
+  @@index([petId])
+  @@index([adopterId])
+  @@index([status])
+}
+
+model MatchResult {
+  id String @id @default(uuid())
+
+  adopterId String
+  petId     String
+
+  score            Decimal
+  isEligible       Boolean
+  explanation      String?
+  modelName        String?
+  algorithmVersion String
+
+  calculatedAt DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  adopter User @relation(fields: [adopterId], references: [id], onDelete: Cascade)
+  pet     Pet  @relation(fields: [petId], references: [id], onDelete: Cascade)
+
+  @@unique([adopterId, petId])
+  @@index([petId])
+  @@index([adopterId])
+}
