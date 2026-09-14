@@ -24,6 +24,8 @@ jobs:
         run: npm ci
 
       - name: Generate Prisma Client
+        env:
+          DATABASE_URL: "postgresql://neondb_owner:npg_jDx3qLWH9rBC@ep-steep-boat-b2uvps0p-pooler.c-6.eu-central-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require"
         run: npx prisma generate
 
       - name: Run TypeScript Check
