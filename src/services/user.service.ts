@@ -3,14 +3,12 @@ import { UserRole } from "@prisma/client"
 
 export interface CreateUserInput {
   email: string
-  name?: string
   passwordHash?: string
   role?: UserRole
 }
 
 export interface UpdateUserInput {
   email?: string
-  name?: string
   passwordHash?: string
   role?: UserRole
 }
@@ -20,6 +18,8 @@ export class UserService {
   static async getAllUsers() {
     return await prisma.user.findMany({
       include: {
+        adopterProfile: true,
+        shelterStaff: true,
         applications: true,
       },
     })
@@ -30,6 +30,8 @@ export class UserService {
     const user = await prisma.user.findUnique({
       where: { id },
       include: {
+        adopterProfile: true,
+        shelterStaff: true,
         applications: true,
       },
     })
@@ -48,7 +50,6 @@ export class UserService {
     return await prisma.user.create({
       data: {
         email: data.email,
-        name: data.name,
         passwordHash: data.passwordHash || "temporary_hash_placeholder",
         role: data.role || UserRole.ADOPTER,
       },
