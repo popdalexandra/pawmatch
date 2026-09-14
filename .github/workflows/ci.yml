@@ -2,9 +2,9 @@ name: CI Pipeline
 
 on:
   push:
-    branches: ["**"] # Runs on push to ANY branch (feature branches, main, etc.)
+    branches: ["**"]
   pull_request:
-    branches: [main, master] # Runs when PRs are targeting main/master
+    branches: [main, master]
 
 jobs:
   test-and-typecheck:
