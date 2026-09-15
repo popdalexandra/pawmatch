@@ -8,6 +8,11 @@ export interface RegisterUserInput {
   role?: UserRole
 }
 
+export interface LoginUserInput {
+  email: string
+  password: string
+}
+
 export class AuthService {
   private static SALT_ROUNDS = 10
 
@@ -17,15 +22,7 @@ export class AuthService {
   static async register(data: RegisterUserInput) {
     const { email, password, role } = data
 
-    if (!email || !email.includes("@")) {
-      throw new Error("Invalid email address")
-    }
-
-    if (!password || password.length < 6) {
-      throw new Error("Password must be at least 6 characters long")
-    }
-
-    // Check if user already exists
+    // 1. Check if user already exists
     const existingUser = await prisma.user.findUnique({
       where: { email },
     })
@@ -34,10 +31,10 @@ export class AuthService {
       throw new Error("User with this email already exists")
     }
 
-    // Hash password securely
+    // 2. Hash password securely
     const passwordHash = await bcrypt.hash(password, this.SALT_ROUNDS)
 
-    // Create user record
+    // 3. Create user record
     const user = await prisma.user.create({
       data: {
         email,
@@ -53,5 +50,37 @@ export class AuthService {
     })
 
     return user
+  }
+
+  /**
+   * Verifies user credentials during login
+   */
+  static async login(data: LoginUserInput) {
+    const { email, password } = data
+
+    // 1. Fetch user by email
+    const user = await prisma.user.findUnique({
+      where: { email },
+    })
+
+    // Generic error message prevents account enumeration attacks
+    if (!user) {
+      throw new Error("Invalid email or password")
+    }
+
+    // 2. Compare password against stored hash
+    const isPasswordValid = await bcrypt.compare(password, user.passwordHash)
+
+    if (!isPasswordValid) {
+      throw new Error("Invalid email or password")
+    }
+
+    // 3. Return sanitized user object (excluding passwordHash)
+    return {
+      id: user.id,
+      email: user.email,
+      role: user.role,
+      createdAt: user.createdAt,
+    }
   }
 }

@@ -1,7 +1,6 @@
 import NextAuth from "next-auth"
 import Credentials from "next-auth/providers/credentials"
-import { prisma } from "@/lib/prisma"
-import bcrypt from "bcryptjs"
+import { AuthService } from "@/services/auth.service"
 import { UserRole } from "@prisma/client"
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
@@ -10,14 +9,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       name: "Credentials",
 
       credentials: {
-        email: {
-          label: "Email",
-          type: "email",
-        },
-        password: {
-          label: "Password",
-          type: "password",
-        },
+        email: { label: "Email", type: "email" },
+        password: { label: "Password", type: "password" },
       },
 
       async authorize(credentials) {
@@ -25,32 +18,21 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           return null
         }
 
-        const email = credentials.email as string
-        const password = credentials.password as string
+        try {
+          // Delegate database verification to AuthService
+          const user = await AuthService.login({
+            email: credentials.email as string,
+            password: credentials.password as string,
+          })
 
-        const user = await prisma.user.findUnique({
-          where: {
-            email,
-          },
-        })
-
-        if (!user || !user.passwordHash) {
+          return {
+            id: user.id,
+            email: user.email,
+            role: user.role,
+          }
+        } catch {
+          // Return null on invalid credentials to signal failure to NextAuth
           return null
-        }
-
-        const isValid = await bcrypt.compare(
-          password,
-          user.passwordHash
-        )
-
-        if (!isValid) {
-          return null
-        }
-
-        return {
-          id: user.id,
-          email: user.email,
-          role: user.role,
         }
       },
     }),
@@ -59,18 +41,21 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
-        token.role = user.role
+        token.id = user.id
+        token.role = (user as { role?: UserRole }).role
       }
-
       return token
     },
 
     async session({ session, token }) {
-  if (session.user && token.role) {
-    session.user.role = token.role as UserRole
-  }
-  return session
-}
+      if (session.user) {
+        session.user.id = token.id as string
+        if (token.role) {
+          session.user.role = token.role as UserRole
+        }
+      }
+      return session
+    },
   },
 
   session: {

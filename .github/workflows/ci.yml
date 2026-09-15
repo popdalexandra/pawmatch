@@ -25,7 +25,7 @@ jobs:
 
       - name: Generate Prisma Client
         env:
-          DATABASE_URL: "postgresql://neondb_owner:npg_jDx3qLWH9rBC@ep-steep-boat-b2uvps0p-pooler.c-6.eu-central-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require"
+          DATABASE_URL: "postgresql://mock:mock@localhost:5432/mock"
         run: npx prisma generate
 
       - name: Run TypeScript Check
@@ -33,3 +33,12 @@ jobs:
 
       - name: Run Vitest Suite
         run: npx vitest run
+
+      - name: Run TypeScript Check
+        run: npx tsc --noEmit
+
+      - name: Run Vitest Suite
+        run: npx vitest run
+        env:
+          DATABASE_URL: "postgresql://mock:mock@localhost:5432/mock"
+          AUTH_SECRET: "ci-mock-secret-key-12345"
