@@ -1,0 +1,35 @@
+name: CI Pipeline
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  test-and-typecheck:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: "npm"
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Generate Prisma Client
+        env:
+          DATABASE_URL: "postgresql://neondb_owner:npg_jDx3qLWH9rBC@ep-steep-boat-b2uvps0p-pooler.c-6.eu-central-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require"
+        run: npx prisma generate
+
+      - name: Run TypeScript Check
+        run: npx tsc --noEmit
+
+      - name: Run Vitest Suite
+        run: npx vitest run
